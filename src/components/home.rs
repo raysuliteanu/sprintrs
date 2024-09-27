@@ -6,18 +6,18 @@ use super::Component;
 use crate::{action::Action, config::Config};
 
 #[derive(Default)]
-pub struct Home {
+pub struct Initializr {
     command_tx: Option<UnboundedSender<Action>>,
     config: Config,
 }
 
-impl Home {
+impl Initializr {
     pub fn new() -> Self {
         Self::default()
     }
 }
 
-impl Component for Home {
+impl Component for Initializr {
     fn register_action_handler(&mut self, tx: UnboundedSender<Action>) -> Result<()> {
         self.command_tx = Some(tx);
         Ok(())
@@ -42,7 +42,56 @@ impl Component for Home {
     }
 
     fn draw(&mut self, frame: &mut Frame, area: Rect) -> Result<()> {
-        frame.render_widget(Paragraph::new("spring initializr"), area);
+        let chunks = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([
+                Constraint::Length(3),
+                Constraint::Min(1),
+                Constraint::Length(3),
+            ])
+            .split(frame.area());
+
+        let title_block = Block::default()
+            .borders(Borders::ALL)
+            .style(Style::default());
+
+        let title = Paragraph::new(Text::styled(
+            "spring initializr",
+            Style::default().fg(Color::Green),
+        ))
+        .block(title_block);
+
+        frame.render_widget(title, chunks[0]);
+
+        let main_block = Block::default()
+            .borders(Borders::ALL)
+            .style(Style::default());
+
+        let main_content = Paragraph::new(Text::styled(
+            "main content goes here",
+            Style::default().fg(Color::Blue),
+        ))
+        .block(main_block);
+
+        frame.render_widget(main_content, chunks[1]);
+
+        let footer_chunk = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([Constraint::Percentage(100)])
+            .split(chunks[2]);
+
+        let footer_block = Block::default()
+            .borders(Borders::ALL)
+            .style(Style::default());
+
+        let footer_content = Paragraph::new(Text::styled(
+            "buttons will go here",
+            Style::default().fg(Color::Red),
+        ))
+        .block(footer_block);
+
+        frame.render_widget(footer_content, footer_chunk[0]);
+
         Ok(())
     }
 }

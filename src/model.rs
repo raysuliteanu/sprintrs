@@ -39,8 +39,7 @@ struct DependencyValue {
     description: String,
     #[serde(rename(deserialize = "_links"), skip)]
     links: Link,
-    #[serde(default)]
-    version_range: String,
+    version_range: Option<String>,
 }
 
 #[derive(Debug, Default, Serialize, Deserialize)]
@@ -58,8 +57,8 @@ struct ProjectType {
     id: String,
     name: String,
     description: String,
-    action: String,
-    tags: Vec<(String, String)>,
+    action: Option<String>,
+    tags: Option<Vec<(String, String)>>,
 }
 
 #[derive(Debug, Default, Serialize, Deserialize)]
@@ -117,14 +116,13 @@ struct TypeAndDefault {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::io;
 
     #[test]
     fn deserialize_trivial() {
         let json = r#"
-{ 
-    "_links": {}, 
-    "dependencies": {}, 
+{
+    "_links": {},
+    "dependencies": {},
     "type": {},
     "packaging": {},
     "javaVersion": {},
