@@ -18,11 +18,13 @@ mod tui;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    crate::errors::init()?;
-    crate::logging::init()?;
+    errors::init()?;
+    logging::init()?;
 
     let args = Cli::parse();
-    let mut app = App::new(args.tick_rate, args.frame_rate)?;
+
+    let mut app = App::new(args)?;
     app.run().await?;
+
     Ok(())
 }

@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc;
 use tracing::{debug, info};
 
+use crate::cli::Cli;
 use crate::{
     action::Action,
     components::{fps::FpsCounter, home::Home, Component},
@@ -32,7 +33,9 @@ pub enum Mode {
 }
 
 impl App {
-    pub fn new(tick_rate: f64, frame_rate: f64) -> Result<Self> {
+    pub fn new(cli: Cli) -> Result<Self> {
+        let tick_rate = cli.tick_rate;
+        let frame_rate = cli.frame_rate;
         let (action_tx, action_rx) = mpsc::unbounded_channel();
         Ok(Self {
             tick_rate,
@@ -50,7 +53,7 @@ impl App {
 
     pub async fn run(&mut self) -> Result<()> {
         let mut tui = Tui::new()?
-            // .mouse(true) // uncomment this line to enable mouse support
+            .mouse(true)
             .tick_rate(self.tick_rate)
             .frame_rate(self.frame_rate);
         tui.enter()?;
