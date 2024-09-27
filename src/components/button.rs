@@ -1,20 +1,9 @@
-use std::{io::stdout, ops::ControlFlow, time::Duration};
-
-use color_eyre::Result;
 use ratatui::{
     buffer::Buffer,
-    crossterm::{
-        event::{
-            self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, MouseButton, MouseEvent,
-            MouseEventKind,
-        },
-        execute,
-    },
-    layout::{Constraint, Layout, Rect},
+    layout::Rect,
     style::{Color, Style},
     text::Line,
-    widgets::{Paragraph, Widget},
-    DefaultTerminal, Frame,
+    widgets::Widget,
 };
 
 #[derive(Debug, Clone)]
