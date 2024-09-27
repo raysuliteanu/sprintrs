@@ -1,6 +1,7 @@
 use super::Component;
 use crate::{action::Action, config::Config, model, widgets};
 use color_eyre::Result;
+use ratatui::layout::Constraint::{Fill, Percentage, Ratio};
 use ratatui::{prelude::*, widgets::*};
 use tokio::sync::mpsc::UnboundedSender;
 use widgets::button;
@@ -46,14 +47,12 @@ impl Component for InitializrUi {
     }
 
     fn draw(&mut self, frame: &mut Frame, area: Rect) -> Result<()> {
-        let chunks = Layout::default()
-            .direction(Direction::Vertical)
-            .constraints([
-                Constraint::Length(3),
-                Constraint::Min(1),
-                Constraint::Length(3),
-            ])
-            .split(area);
+        let [top, middle, bottom] = Layout::vertical([
+            Constraint::Length(3),
+            Constraint::Min(1),
+            Constraint::Length(3),
+        ])
+        .areas(area);
 
         let title_block = Block::default()
             .borders(Borders::BOTTOM)
@@ -68,14 +67,13 @@ impl Component for InitializrUi {
             .centered()
             .block(title_block);
 
-        frame.render_widget(title, chunks[0]);
+        frame.render_widget(title, top);
 
-        let main_chunks = Layout::default()
-            .direction(Direction::Horizontal)
-            .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
-            .split(chunks[1]);
+        let [main_left, main_right] =
+            Layout::horizontal([Constraint::Percentage(50), Constraint::Percentage(50)])
+                .areas(middle);
 
-        let main_block = Block::default()
+        let main_left_block = Block::default()
             .borders(Borders::RIGHT)
             .style(Style::default().fg(Color::White).bg(Color::Black));
 
@@ -85,22 +83,31 @@ impl Component for InitializrUi {
             String::from_utf8_lossy(&buf),
             Style::default().fg(Color::Blue),
         ))
-        .block(main_block);
+        .wrap(Wrap { trim: false })
+        .block(main_left_block);
 
-        frame.render_widget(main_content, main_chunks[0]);
+        frame.render_widget(main_content, main_left);
 
-        let [button_block] = Layout::vertical([Constraint::Percentage(0)]).areas(chunks[2]);
+        let main_right_block = Block::default()
+            .borders(Borders::NONE)
+            .style(Style::default().fg(Color::White).bg(Color::Black));
 
-        let [_, generate, _, explore, _, share, _] = Layout::horizontal([
-            Constraint::Percentage(0),
-            Constraint::Percentage(20),
-            Constraint::Percentage(2),
-            Constraint::Percentage(20),
-            Constraint::Percentage(2),
-            Constraint::Percentage(20),
-            Constraint::Percentage(0),
-        ])
-        .areas(button_block);
+        let main_content = Paragraph::new(Text::styled(
+            "main right content coming soon",
+            Style::default().fg(Color::Blue),
+        ))
+        .centered()
+        .block(main_right_block);
+
+        frame.render_widget(main_content, main_right);
+
+        let [bottom_layout] = Layout::vertical([Constraint::Percentage(0)]).areas(bottom);
+
+        let [_, button_block_layout, _] =
+            Layout::horizontal([Fill(1), Percentage(50), Fill(1)]).areas(bottom_layout);
+
+        let [generate, explore, share] =
+            Layout::horizontal([Ratio(1, 3); 3]).areas(button_block_layout);
 
         let generate_button = button::Button::new("GENERATE");
         let explore_button = button::Button::new("EXPLORE");
