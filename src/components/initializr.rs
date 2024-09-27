@@ -2,7 +2,7 @@ use color_eyre::Result;
 use ratatui::{prelude::*, widgets::*};
 use tokio::sync::mpsc::UnboundedSender;
 
-use super::Component;
+use super::{button, Component};
 use crate::{action::Action, config::Config};
 
 #[derive(Default)]
@@ -49,23 +49,31 @@ impl Component for InitializrUi {
                 Constraint::Min(1),
                 Constraint::Length(3),
             ])
-            .split(frame.area());
+            .split(area);
 
         let title_block = Block::default()
-            .borders(Borders::ALL)
-            .style(Style::default());
+            .borders(Borders::BOTTOM)
+            .style(Style::default().fg(Color::White).bg(Color::Black));
 
-        let title = Paragraph::new(Text::styled(
-            "spring initializr",
-            Style::default().fg(Color::Green),
-        ))
-        .block(title_block);
+        let title_text = vec![
+            Span::styled("spring ", Style::default().fg(Color::Green)),
+            Span::styled("initializr", Style::default().fg(Color::White)),
+        ];
+
+        let title = Paragraph::new(Line::from(title_text))
+            .centered()
+            .block(title_block);
 
         frame.render_widget(title, chunks[0]);
 
+        let main_chunks = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
+            .split(chunks[1]);
+
         let main_block = Block::default()
-            .borders(Borders::ALL)
-            .style(Style::default());
+            .borders(Borders::RIGHT)
+            .style(Style::default().fg(Color::White).bg(Color::Black));
 
         let main_content = Paragraph::new(Text::styled(
             "main content goes here",
@@ -73,24 +81,26 @@ impl Component for InitializrUi {
         ))
         .block(main_block);
 
-        frame.render_widget(main_content, chunks[1]);
+        frame.render_widget(main_content, main_chunks[0]);
 
-        let footer_chunk = Layout::default()
-            .direction(Direction::Horizontal)
-            .constraints([Constraint::Percentage(100)])
-            .split(chunks[2]);
+        let [_, generate, _, explore, _, share, _] = Layout::horizontal([
+            Constraint::Percentage(0),
+            Constraint::Percentage(20),
+            Constraint::Percentage(2),
+            Constraint::Percentage(20),
+            Constraint::Percentage(2),
+            Constraint::Percentage(20),
+            Constraint::Percentage(0),
+        ])
+        .areas(chunks[2]);
 
-        let footer_block = Block::default()
-            .borders(Borders::ALL)
-            .style(Style::default());
+        let generate_button = button::Button::new("GENERATE");
+        let explore_button = button::Button::new("EXPLORE");
+        let share_button = button::Button::new("SHARE");
 
-        let footer_content = Paragraph::new(Text::styled(
-            "buttons will go here",
-            Style::default().fg(Color::Red),
-        ))
-        .block(footer_block);
-
-        frame.render_widget(footer_content, footer_chunk[0]);
+        frame.render_widget(generate_button, generate);
+        frame.render_widget(explore_button, explore);
+        frame.render_widget(share_button, share);
 
         Ok(())
     }
