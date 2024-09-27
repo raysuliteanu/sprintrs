@@ -1,19 +1,23 @@
+use super::Component;
+use crate::{action::Action, config::Config, model, widgets};
 use color_eyre::Result;
 use ratatui::{prelude::*, widgets::*};
 use tokio::sync::mpsc::UnboundedSender;
+use widgets::button;
 
-use super::{button, Component};
-use crate::{action::Action, config::Config};
-
-#[derive(Default)]
 pub struct InitializrUi {
     command_tx: Option<UnboundedSender<Action>>,
     config: Config,
+    model: model::StartSpringIoModel,
 }
 
 impl InitializrUi {
-    pub fn new() -> Self {
-        Self::default()
+    pub fn new(model: model::StartSpringIoModel) -> Self {
+        Self {
+            model,
+            command_tx: None,
+            config: Config::default(),
+        }
     }
 }
 
@@ -75,13 +79,17 @@ impl Component for InitializrUi {
             .borders(Borders::RIGHT)
             .style(Style::default().fg(Color::White).bg(Color::Black));
 
+        let mut buf = Vec::new();
+        serde_json::to_writer(&mut buf, &self.model).expect("model serialization failed");
         let main_content = Paragraph::new(Text::styled(
-            "main content goes here",
+            String::from_utf8_lossy(&buf),
             Style::default().fg(Color::Blue),
         ))
         .block(main_block);
 
         frame.render_widget(main_content, main_chunks[0]);
+
+        let [button_block] = Layout::vertical([Constraint::Percentage(0)]).areas(chunks[2]);
 
         let [_, generate, _, explore, _, share, _] = Layout::horizontal([
             Constraint::Percentage(0),
@@ -92,7 +100,7 @@ impl Component for InitializrUi {
             Constraint::Percentage(20),
             Constraint::Percentage(0),
         ])
-        .areas(chunks[2]);
+        .areas(button_block);
 
         let generate_button = button::Button::new("GENERATE");
         let explore_button = button::Button::new("EXPLORE");

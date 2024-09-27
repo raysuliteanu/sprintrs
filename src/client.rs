@@ -3,7 +3,7 @@ use std::time::Duration;
 
 use crate::{common, model};
 
-pub(crate) struct Client {
+pub struct Client {
     client: reqwest::Client,
 }
 

@@ -8,7 +8,6 @@ use tracing::{debug, info};
 use crate::cli::Cli;
 use crate::{
     action::Action,
-    client,
     components::{initializr::InitializrUi, Component},
     config::Config,
     model,
@@ -16,7 +15,6 @@ use crate::{
 };
 
 pub struct App {
-    model: Option<model::StartSpringIoModel>,
     config: Config,
     tick_rate: f64,
     frame_rate: f64,
@@ -29,16 +27,16 @@ pub struct App {
 }
 
 impl App {
-    pub fn new(cli: Cli) -> Result<Self> {
+    pub fn new(cli: Cli, model: model::StartSpringIoModel) -> Result<Self> {
         let tick_rate = cli.tick_rate;
         let frame_rate = cli.frame_rate;
         let (action_tx, action_rx) = mpsc::unbounded_channel();
+
         Ok(Self {
-            model: None,
             config: Config::new()?,
             tick_rate,
             frame_rate,
-            components: vec![Box::new(InitializrUi::new())],
+            components: vec![Box::new(InitializrUi::new(model))],
             should_quit: false,
             should_suspend: false,
             last_tick_key_events: Vec::new(),
@@ -54,11 +52,6 @@ impl App {
             .frame_rate(self.frame_rate);
 
         tui.enter()?;
-
-        let client = client::Client::new()?;
-        let model = client.initialize().await?;
-
-        self.model = Some(model);
 
         for component in self.components.iter_mut() {
             component.register_action_handler(self.action_tx.clone())?;

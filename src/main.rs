@@ -15,6 +15,7 @@ mod errors;
 mod logging;
 mod model;
 mod tui;
+mod widgets;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -23,7 +24,10 @@ async fn main() -> Result<()> {
 
     let args = Cli::parse();
 
-    let mut app = App::new(args)?;
+    let client = client::Client::new()?;
+    let model = client.initialize().await?;
+
+    let mut app = App::new(args, model)?;
     app.run().await?;
 
     Ok(())
