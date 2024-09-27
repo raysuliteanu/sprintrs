@@ -7,10 +7,13 @@ use crate::app::App;
 mod action;
 mod app;
 mod cli;
+mod client;
+mod common;
 mod components;
 mod config;
 mod errors;
 mod logging;
+mod model;
 mod tui;
 
 #[tokio::main]
