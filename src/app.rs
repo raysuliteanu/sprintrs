@@ -8,28 +8,24 @@ use tracing::{debug, info};
 use crate::cli::Cli;
 use crate::{
     action::Action,
-    components::{fps::FpsCounter, home::Initializr, Component},
+    client,
+    components::{initializr::InitializrUi, Component},
     config::Config,
+    model,
     tui::{Event, Tui},
 };
 
 pub struct App {
+    model: Option<model::StartSpringIoModel>,
     config: Config,
     tick_rate: f64,
     frame_rate: f64,
     components: Vec<Box<dyn Component>>,
     should_quit: bool,
     should_suspend: bool,
-    mode: Mode,
     last_tick_key_events: Vec<KeyEvent>,
     action_tx: mpsc::UnboundedSender<Action>,
     action_rx: mpsc::UnboundedReceiver<Action>,
-}
-
-#[derive(Default, Debug, Copy, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub enum Mode {
-    #[default]
-    Home,
 }
 
 impl App {
@@ -38,13 +34,13 @@ impl App {
         let frame_rate = cli.frame_rate;
         let (action_tx, action_rx) = mpsc::unbounded_channel();
         Ok(Self {
+            model: None,
+            config: Config::new()?,
             tick_rate,
             frame_rate,
-            components: vec![Box::new(Initializr::new())],
+            components: vec![Box::new(InitializrUi::new())],
             should_quit: false,
             should_suspend: false,
-            config: Config::new()?,
-            mode: Mode::Home,
             last_tick_key_events: Vec::new(),
             action_tx,
             action_rx,
@@ -56,14 +52,22 @@ impl App {
             .mouse(true)
             .tick_rate(self.tick_rate)
             .frame_rate(self.frame_rate);
+
         tui.enter()?;
+
+        let client = client::Client::new()?;
+        let model = client.initialize().await?;
+
+        self.model = Some(model);
 
         for component in self.components.iter_mut() {
             component.register_action_handler(self.action_tx.clone())?;
         }
+
         for component in self.components.iter_mut() {
             component.register_config_handler(self.config.clone())?;
         }
+
         for component in self.components.iter_mut() {
             component.init(tui.size()?)?;
         }
@@ -83,7 +87,9 @@ impl App {
                 break;
             }
         }
+
         tui.exit()?;
+
         Ok(())
     }
 
@@ -110,10 +116,7 @@ impl App {
 
     fn handle_key_event(&mut self, key: KeyEvent) -> Result<()> {
         let action_tx = self.action_tx.clone();
-        let Some(keymap) = self.config.keybindings.get(&self.mode) else {
-            return Ok(());
-        };
-        match keymap.get(&vec![key]) {
+        match self.config.keybindings.get(&vec![key]) {
             Some(action) => {
                 info!("Got action: {action:?}");
                 action_tx.send(action.clone())?;
@@ -124,7 +127,7 @@ impl App {
                 self.last_tick_key_events.push(key);
 
                 // Check for multi-key combinations
-                if let Some(action) = keymap.get(&self.last_tick_key_events) {
+                if let Some(action) = self.config.keybindings.get(&self.last_tick_key_events) {
                     info!("Got action: {action:?}");
                     action_tx.send(action.clone())?;
                 }

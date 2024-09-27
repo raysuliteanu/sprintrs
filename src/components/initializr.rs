@@ -6,18 +6,18 @@ use super::Component;
 use crate::{action::Action, config::Config};
 
 #[derive(Default)]
-pub struct Initializr {
+pub struct InitializrUi {
     command_tx: Option<UnboundedSender<Action>>,
     config: Config,
 }
 
-impl Initializr {
+impl InitializrUi {
     pub fn new() -> Self {
         Self::default()
     }
 }
 
-impl Component for Initializr {
+impl Component for InitializrUi {
     fn register_action_handler(&mut self, tx: UnboundedSender<Action>) -> Result<()> {
         self.command_tx = Some(tx);
         Ok(())

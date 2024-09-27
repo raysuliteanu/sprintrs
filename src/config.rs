@@ -11,22 +11,16 @@ use ratatui::style::{Color, Modifier, Style};
 use serde::{de::Deserializer, Deserialize};
 use tracing::error;
 
-use crate::{action::Action, app::Mode};
+use crate::{action::Action, common};
 
-const CONFIG: &str = include_str!("../.config/config.json5");
+const DEFAULT_CONFIG: &str = include_str!("../.config/config.json5");
 
-#[derive(Clone, Debug, Deserialize, Default)]
-pub struct AppConfig {
+#[derive(Clone, Debug, Default, Deserialize)]
+pub struct Config {
     #[serde(default)]
     pub data_dir: PathBuf,
     #[serde(default)]
     pub config_dir: PathBuf,
-}
-
-#[derive(Clone, Debug, Default, Deserialize)]
-pub struct Config {
-    #[serde(default, flatten)]
-    pub config: AppConfig,
     #[serde(default)]
     pub keybindings: KeyBindings,
     #[serde(default)]
@@ -47,7 +41,7 @@ lazy_static! {
 
 impl Config {
     pub fn new() -> Result<Self, config::ConfigError> {
-        let default_config: Config = json5::from_str(CONFIG).unwrap();
+        let default_config: Config = json5::from_str(DEFAULT_CONFIG).unwrap();
         let data_dir = get_data_dir();
         let config_dir = get_config_dir();
         let mut builder = config::Config::builder()
@@ -61,6 +55,7 @@ impl Config {
             ("config.toml", config::FileFormat::Toml),
             ("config.ini", config::FileFormat::Ini),
         ];
+
         let mut found_config = false;
         for (file, format) in &config_files {
             let source = config::File::from(config_dir.join(file))
@@ -71,25 +66,16 @@ impl Config {
                 found_config = true
             }
         }
+
         if !found_config {
             error!("No configuration file found. Application may not behave as expected");
         }
 
         let mut cfg: Self = builder.build()?.try_deserialize()?;
 
-        for (mode, default_bindings) in default_config.keybindings.iter() {
-            let user_bindings = cfg.keybindings.entry(*mode).or_default();
-            for (key, cmd) in default_bindings.iter() {
-                user_bindings
-                    .entry(key.clone())
-                    .or_insert_with(|| cmd.clone());
-            }
-        }
-        for (mode, default_styles) in default_config.styles.iter() {
-            let user_styles = cfg.styles.entry(*mode).or_default();
-            for (style_key, style) in default_styles.iter() {
-                user_styles.entry(style_key.clone()).or_insert(*style);
-            }
+        for (key, style) in default_config.styles.iter() {
+            let user_styles = &mut cfg.styles;
+            user_styles.entry(key.clone()).or_insert(*style);
         }
 
         Ok(cfg)
@@ -119,28 +105,22 @@ pub fn get_config_dir() -> PathBuf {
 }
 
 fn project_directory() -> Option<ProjectDirs> {
-    ProjectDirs::from("com", "kdheepak", env!("CARGO_PKG_NAME"))
+    ProjectDirs::from("com", common::ORG_NAME, common::APP_NAME)
 }
 
 #[derive(Clone, Debug, Default, Deref, DerefMut)]
-pub struct KeyBindings(pub HashMap<Mode, HashMap<Vec<KeyEvent>, Action>>);
+pub struct KeyBindings(HashMap<Vec<KeyEvent>, Action>);
 
 impl<'de> Deserialize<'de> for KeyBindings {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
-        let parsed_map = HashMap::<Mode, HashMap<String, Action>>::deserialize(deserializer)?;
+        let parsed_map = HashMap::<String, Action>::deserialize(deserializer)?;
 
         let keybindings = parsed_map
             .into_iter()
-            .map(|(mode, inner_map)| {
-                let converted_inner_map = inner_map
-                    .into_iter()
-                    .map(|(key_str, cmd)| (parse_key_sequence(&key_str).unwrap(), cmd))
-                    .collect();
-                (mode, converted_inner_map)
-            })
+            .map(|(key, action)| (parse_key_sequence(&key).unwrap(), action))
             .collect();
 
         Ok(KeyBindings(keybindings))
@@ -319,24 +299,18 @@ pub fn parse_key_sequence(raw: &str) -> Result<Vec<KeyEvent>, String> {
 }
 
 #[derive(Clone, Debug, Default, Deref, DerefMut)]
-pub struct Styles(pub HashMap<Mode, HashMap<String, Style>>);
+pub struct Styles(pub HashMap<String, Style>);
 
 impl<'de> Deserialize<'de> for Styles {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
-        let parsed_map = HashMap::<Mode, HashMap<String, String>>::deserialize(deserializer)?;
+        let parsed_map = HashMap::<String, String>::deserialize(deserializer)?;
 
         let styles = parsed_map
             .into_iter()
-            .map(|(mode, inner_map)| {
-                let converted_inner_map = inner_map
-                    .into_iter()
-                    .map(|(str, style)| (str, parse_style(&style)))
-                    .collect();
-                (mode, converted_inner_map)
-            })
+            .map(|(name, style)| (name, parse_style(&style)))
             .collect();
 
         Ok(Styles(styles))
@@ -498,20 +472,6 @@ mod tests {
     fn test_parse_color_unknown() {
         let color = parse_color("unknown");
         assert_eq!(color, None);
-    }
-
-    #[test]
-    fn test_config() -> Result<()> {
-        let c = Config::new()?;
-        assert_eq!(
-            c.keybindings
-                .get(&Mode::Home)
-                .unwrap()
-                .get(&parse_key_sequence("<q>").unwrap_or_default())
-                .unwrap(),
-            &Action::Quit
-        );
-        Ok(())
     }
 
     #[test]
