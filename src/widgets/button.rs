@@ -10,7 +10,7 @@ pub struct Button<'a> {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum State {
+pub enum State {
     Normal,
     Clicked,
 }
