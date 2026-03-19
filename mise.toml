@@ -1,0 +1,4 @@
+[env]
+SPRINTRS_CONFIG = "{{ config_root }}/.config"
+SPRINTRS_DATA = "{{ config_root }}/.data"
+SPRINTRS_LOG_LEVEL = "debug"
